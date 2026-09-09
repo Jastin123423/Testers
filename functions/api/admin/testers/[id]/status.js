@@ -7,11 +7,16 @@ export async function onRequestPost(context) {
     'Content-Type': 'application/json'
   };
 
+  const correctUrls = {
+    'pdf-office': 'https://play.google.com/apps/testing/co.pdfoffice.ap',
+    'free-screen-recorder': 'https://play.google.com/apps/testing/co.freescreenrecorder.ap',
+    'jobsreport': 'https://play.google.com/apps/testing/co.jobsreport.ap',
+    'music-play': 'https://play.google.com/apps/testing/co.musicplay.ap',
+    'top-file-manager': 'https://play.google.com/apps/testing/co.topfilemanager.ap',
+    'int-calculator': 'https://play.google.com/apps/testing/co.intcalculator.ap'
+  };
+
   try {
-    console.log('Status update endpoint hit');
-    console.log('Params:', params);
-    
-    // Validate token
     const authHeader = request.headers.get('Authorization') || '';
     const token = authHeader.replace('Bearer ', '');
     
@@ -26,10 +31,7 @@ export async function onRequestPost(context) {
     }
 
     const testerId = params.id;
-    const body = await request.json();
-    const { status } = body;
-    
-    console.log('Updating tester:', { testerId, status });
+    const { status } = await request.json();
 
     if (!['pending', 'approved', 'rejected'].includes(status)) {
       return new Response(JSON.stringify({
@@ -41,7 +43,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Get the registration
     const reg = await env.DB.prepare(
       'SELECT * FROM registrations WHERE id = ?'
     ).bind(testerId).first();
@@ -56,37 +57,16 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Get testing URL if approving
     let testingUrl = null;
     if (status === 'approved') {
-      // First try to get from apps table
-      const app = await env.DB.prepare(
-        'SELECT testing_url FROM apps WHERE id = ?'
-      ).bind(reg.app_id).first();
-      
-      if (app && app.testing_url) {
-        testingUrl = app.testing_url;
-      } else {
-        // Use correct default URLs
-        const defaultUrls = {
-          'pdf-office': 'https://play.google.com/apps/testing/co.pdfoffice.ap',
-          'free-screen-recorder': 'https://play.google.com/apps/testing/co.freescreenrecorder.ap',
-          'jobsreport': 'https://play.google.com/apps/testing/co.jobsreport.ap',
-          'music-play': 'https://play.google.com/apps/testing/co.musicplay.ap',
-          'top-file-manager': 'https://play.google.com/apps/testing/co.topfilemanager.ap',
-          'int-calculator': 'https://play.google.com/apps/testing/co.intcalculator.ap'
-        };
-        testingUrl = defaultUrls[reg.app_id] || null;
-      }
+      testingUrl = correctUrls[reg.app_id] || reg.testing_url;
     }
 
-    // Update status
     const now = new Date().toISOString();
     await env.DB.prepare(
       'UPDATE registrations SET status = ?, testing_url = ?, updated_at = ? WHERE id = ?'
     ).bind(status, testingUrl, now, testerId).run();
 
-    // Get updated registration
     const updatedReg = await env.DB.prepare(`
       SELECT r.*, t.email, t.session_id, t.device_id
       FROM registrations r
@@ -114,7 +94,7 @@ export async function onRequestPost(context) {
     console.error('Error updating status:', error);
     return new Response(JSON.stringify({
       success: false,
-      message: error.message || 'Internal server error'
+      message: error.message
     }), { 
       status: 500,
       headers: corsHeaders 
@@ -133,14 +113,9 @@ export async function onRequestOptions() {
 }
 
 async function validateAdminToken(token, env) {
-  try {
-    const result = await env.DB.prepare(
-      'SELECT * FROM admin_tokens WHERE token = ? AND expires_at > ?'
-    ).bind(token, new Date().toISOString()).first();
-    
-    return !!result;
-  } catch (error) {
-    console.error('Token validation error:', error);
-    return false;
-  }
+  const result = await env.DB.prepare(
+    'SELECT * FROM admin_tokens WHERE token = ? AND expires_at > ?'
+  ).bind(token, new Date().toISOString()).first();
+  
+  return !!result;
 }
