@@ -21,24 +21,45 @@ export async function onRequestGet(context) {
       });
     }
 
+    // Get all testers with their registrations
     const result = await env.DB.prepare(`
-      SELECT r.*, t.email, t.session_id, t.device_id
-      FROM registrations r
-      JOIN testers t ON r.tester_id = t.id
-      ORDER BY r.created_at DESC
+      SELECT t.id as tester_id, t.email, t.session_id, t.device_id, t.created_at as tester_created_at,
+             r.id as reg_id, r.app_id, r.app_name, r.status, r.testing_url, r.created_at as reg_created_at
+      FROM testers t
+      LEFT JOIN registrations r ON t.id = r.tester_id
+      ORDER BY t.created_at DESC
     `).all();
 
-    const testers = result.results.map(reg => ({
-      id: reg.id,
-      appId: reg.app_id,
-      appName: reg.app_name,
-      status: reg.status,
-      testingUrl: reg.testing_url,
-      createdAt: reg.created_at,
-      email: reg.email,
-      sessionId: reg.session_id,
-      deviceInfo: reg.device_id
-    }));
+    // Group by tester (email)
+    const testersMap = new Map();
+    
+    for (const row of result.results) {
+      if (!testersMap.has(row.tester_id)) {
+        testersMap.set(row.tester_id, {
+          testerId: row.tester_id,
+          email: row.email,
+          sessionId: row.session_id,
+          deviceInfo: row.device_id,
+          createdAt: row.tester_created_at,
+          registrations: []
+        });
+      }
+      
+      const tester = testersMap.get(row.tester_id);
+      
+      if (row.reg_id) {
+        tester.registrations.push({
+          id: row.reg_id,
+          appId: row.app_id,
+          appName: row.app_name,
+          status: row.status,
+          testingUrl: row.testing_url,
+          createdAt: row.reg_created_at
+        });
+      }
+    }
+
+    const testers = Array.from(testersMap.values());
 
     return new Response(JSON.stringify({
       success: true,
@@ -67,14 +88,9 @@ export async function onRequestOptions() {
 }
 
 async function validateAdminToken(token, env) {
-  try {
-    const result = await env.DB.prepare(
-      'SELECT * FROM admin_tokens WHERE token = ? AND expires_at > ?'
-    ).bind(token, new Date().toISOString()).first();
-    
-    return !!result;
-  } catch (error) {
-    console.error('Token validation error:', error);
-    return false;
-  }
+  const result = await env.DB.prepare(
+    'SELECT * FROM admin_tokens WHERE token = ? AND expires_at > ?'
+  ).bind(token, new Date().toISOString()).first();
+  
+  return !!result;
 }
