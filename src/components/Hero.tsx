@@ -9,8 +9,7 @@ import {
   Mail, 
   HelpCircle, 
   ArrowRight,
-  AlertCircle,
-  AlertTriangle
+  AlertCircle
 } from 'lucide-react';
 
 interface HeroProps {
@@ -67,12 +66,6 @@ export const Hero: React.FC<HeroProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto">
           
-          {/* Android-Only Notice Pill / Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 border border-amber-500/30 text-amber-300 shadow-sm mb-6">
-            <Smartphone className="w-3.5 h-3.5 text-amber-400" />
-            <span>Kwa Watumiaji wa Vifaa vya Android Pekee (Google Play)</span>
-          </div>
-
           {/* Headline */}
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white font-['Outfit'] leading-[1.15]">
             Jiunge na Majaribio ya <br className="hidden sm:inline" />
@@ -93,28 +86,20 @@ export const Hero: React.FC<HeroProps> = ({
           {/* STATE 1: NOT REGISTERED YET (FIRST TIME VISITOR) -> SHOW EMAIL ONLY FORM */}
           {!hasRegistered ? (
             <div className="mt-8 max-w-xl mx-auto">
-              <div className="relative rounded-3xl bg-gradient-to-b from-slate-800/90 to-slate-900/95 border border-cyan-500/30 p-6 sm:p-8 shadow-2xl shadow-cyan-500/10 backdrop-blur-xl text-left">
+              <div className="relative rounded-3xl bg-gradient-to-b from-slate-800/90 to-slate-900/95 border-2 border-cyan-500/50 p-6 sm:p-8 shadow-2xl shadow-cyan-500/20 backdrop-blur-xl text-left">
                 
-                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-700/60">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center shrink-0">
-                    <Mail className="w-5 h-5" />
+                {/* Highlighted Email Section */}
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-cyan-500/30">
+                  <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border-2 border-cyan-500/40 text-cyan-400 flex items-center justify-center shrink-0">
+                    <Mail className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white font-['Outfit']">
+                    <h2 className="text-xl font-black text-white font-['Outfit']">
                       Weka Gmail Kufungua Apps Zote
                     </h2>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-sm font-semibold text-cyan-300">
                       Usajili mmoja kwa ajili ya programu zote 6
                     </p>
-                  </div>
-                </div>
-
-                {/* Explicit Notice: Android Users Only */}
-                <div className="mb-5 p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/30 flex items-start gap-3 text-xs text-amber-200">
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <div className="leading-relaxed">
-                    <strong className="text-amber-300 font-bold">MUHIMU SANA: </strong>
-                    Majaribio haya ni kwa watumiaji wa simu au vidonge vya <span className="underline font-bold text-white">Android pekee</span> (Google Play Store). Simu za iPhone / iOS haziwezi kupakua programu hizi.
                   </div>
                 </div>
 
@@ -126,13 +111,13 @@ export const Hero: React.FC<HeroProps> = ({
                 )}
 
                 <form onSubmit={handleFormSubmit} className="space-y-4">
-                  {/* Email Input ONLY */}
+                  {/* Bold Email Input */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
-                      Barua Pepe ya Gmail (Inayotumika Play Store) <span className="text-cyan-400">*</span>:
+                    <label className="block text-sm font-black text-white mb-2 uppercase tracking-wide">
+                      Barua Pepe ya Gmail <span className="text-cyan-400">*</span>
                     </label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <Mail className="w-5 h-5 text-cyan-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         id="input-hero-email"
                         type="email"
@@ -140,11 +125,11 @@ export const Hero: React.FC<HeroProps> = ({
                         value={emailInput}
                         onChange={(e) => setEmailInput(e.target.value)}
                         placeholder="mfano: jina@gmail.com"
-                        className="w-full pl-10 pr-4 py-3.5 rounded-xl bg-slate-800/90 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all shadow-inner"
+                        className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-900 border-2 border-cyan-500/50 text-white placeholder-slate-500 text-base font-bold focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all shadow-lg shadow-cyan-500/10"
                       />
                     </div>
-                    <p className="mt-1.5 text-[11px] text-slate-400">
-                      Hakikisha ni anwani ya Gmail unayotumia kwenye programu ya Google Play kwenye simu yako ya Android.
+                    <p className="mt-2 text-xs font-semibold text-slate-300">
+                      Hakikisha ni anwani ya Gmail unayotumia kwenye Google Play Store.
                     </p>
                   </div>
 
@@ -152,14 +137,14 @@ export const Hero: React.FC<HeroProps> = ({
                     id="btn-submit-hero-email"
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-4 px-6 rounded-xl font-extrabold text-sm sm:text-base text-slate-950 bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-400 hover:from-cyan-300 hover:to-blue-300 transition-all cursor-pointer shadow-xl shadow-cyan-500/25 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                    className="w-full py-4 px-6 rounded-xl font-black text-base sm:text-lg text-slate-950 bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-400 hover:from-cyan-300 hover:to-blue-300 transition-all cursor-pointer shadow-xl shadow-cyan-500/30 flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50"
                   >
-                    <span>{submitting ? 'Inasajili Apps Zote 6...' : 'Jiunge na Majaribio ya Apps Zote 6'}</span>
-                    <ArrowRight className="w-5 h-5" />
+                    <span>{submitting ? 'Inasajili Apps Zote 6...' : 'JIUNGE NA MAJARIBIO YA APPS ZOTE 6'}</span>
+                    <ArrowRight className="w-6 h-6" />
                   </button>
                 </form>
 
-                {/* Option to re-enter email if provided wrong email and apps not showing */}
+                {/* Option to re-enter email */}
                 <div className="mt-5 p-3 rounded-xl bg-slate-900/80 border border-slate-700/70 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
                   <div className="flex items-center gap-2 text-xs text-slate-300">
                     <HelpCircle className="w-4 h-4 text-cyan-400 shrink-0" />
