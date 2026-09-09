@@ -1,0 +1,6 @@
+{
+  "name": "Beta Testing Hub Tanzania",
+  "description": "Tovuti rasmi ya kujiunga na majaribio ya Android apps sita nchini Tanzania kabla hazijatolewa rasmi kwenye Google Play.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
