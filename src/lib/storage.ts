@@ -134,36 +134,6 @@ export function clearTesterData() {
   }
 }
 
-// Fetch live tester statuses from backend
-export async function fetchLiveTesterStatus(overrideEmail?: string): Promise<TesterRegistration[]> {
-  try {
-    const sessionId = getOrCreateSessionId();
-    const email = overrideEmail || getSavedEmail() || '';
-    const queryParams = new URLSearchParams({ sessionId });
-    if (email) {
-      queryParams.set('email', email);
-    }
-
-    const res = await fetch(`/api/tester-status?${queryParams.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch status');
-    const text = await res.text();
-    const data = text ? JSON.parse(text) : {};
-    if (data.success && Array.isArray(data.registrations)) {
-      if (data.registrations.length > 0) {
-        cacheRegistrations(data.registrations);
-        if (!getSavedEmail() && data.registrations[0]?.email) {
-          setSavedEmail(data.registrations[0].email);
-        }
-      }
-      return data.registrations;
-    }
-    return getCachedRegistrations();
-  } catch (err) {
-    console.warn('Network error checking status, falling back to cache:', err);
-    return getCachedRegistrations();
-  }
-}
-
 // Admin token storage
 export function getAdminToken(): string | null {
   try {
@@ -190,5 +160,239 @@ export function clearAdminToken() {
     localStorage.removeItem(ADMIN_TOKEN_KEY);
   } catch (e) {
     console.error('Failed to clear admin token:', e);
+  }
+}
+
+// ============ API INTEGRATION FUNCTIONS ============
+
+// Fetch apps from backend
+export async function apiFetchApps() {
+  try {
+    const res = await fetch('/api/apps');
+    if (!res.ok) {
+      throw new Error('Failed to fetch apps');
+    }
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error fetching apps:', error);
+    return { success: false, apps: [] };
+  }
+}
+
+// Check if email exists and get registrations
+export async function apiCheckEmail(email: string, sessionId: string) {
+  try {
+    const res = await fetch('/api/check-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, sessionId }),
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error checking email:', error);
+    return { success: false, isReturning: false, registrations: [] };
+  }
+}
+
+// Register tester for an app
+export async function apiRegisterTester(data: {
+  email: string;
+  sessionId: string;
+  deviceId?: string;
+  appId: string;
+  appName: string;
+  platform?: string;
+}) {
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const text = await res.text();
+    const result = text ? JSON.parse(text) : {};
+    
+    if (!res.ok) {
+      throw new Error(result.message || 'Registration failed');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error registering:', error);
+    throw error;
+  }
+}
+
+// Change user email
+export async function apiChangeEmail(oldEmail: string, newEmail: string, sessionId: string) {
+  try {
+    const res = await fetch('/api/change-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldEmail, newEmail, sessionId }),
+    });
+    const text = await res.text();
+    const result = text ? JSON.parse(text) : {};
+    
+    if (!res.ok) {
+      throw new Error(result.message || 'Failed to change email');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error changing email:', error);
+    throw error;
+  }
+}
+
+// Admin login
+export async function apiAdminLogin(password: string) {
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error logging in:', error);
+    throw error;
+  }
+}
+
+// Get admin overview stats
+export async function apiAdminOverview(token: string) {
+  try {
+    const res = await fetch('/api/admin/overview', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error fetching overview:', error);
+    throw error;
+  }
+}
+
+// Get all testers (admin)
+export async function apiAdminTesters(token: string) {
+  try {
+    const res = await fetch('/api/admin/testers', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error fetching testers:', error);
+    throw error;
+  }
+}
+
+// Update tester status (admin)
+export async function apiUpdateTesterStatus(token: string, testerId: string, status: string) {
+  try {
+    const res = await fetch(`/api/admin/testers/${testerId}/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error updating status:', error);
+    throw error;
+  }
+}
+
+// Change tester's app (admin)
+export async function apiChangeTesterApp(token: string, testerId: string, appId: string) {
+  try {
+    const res = await fetch(`/api/admin/testers/${testerId}/change-app`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ appId }),
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error changing app:', error);
+    throw error;
+  }
+}
+
+// Delete tester registration (admin)
+export async function apiDeleteTester(token: string, testerId: string) {
+  try {
+    const res = await fetch(`/api/admin/testers/${testerId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error deleting tester:', error);
+    throw error;
+  }
+}
+
+// Update app (admin)
+export async function apiUpdateApp(token: string, appId: string, appData: any) {
+  try {
+    const res = await fetch(`/api/admin/apps/${appId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(appData),
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error updating app:', error);
+    throw error;
+  }
+}
+
+// Enhanced fetchLiveTesterStatus - now uses POST /api/check-email
+export async function fetchLiveTesterStatus(overrideEmail?: string): Promise<TesterRegistration[]> {
+  try {
+    const sessionId = getOrCreateSessionId();
+    const email = overrideEmail || getSavedEmail() || '';
+    
+    const result = await apiCheckEmail(email, sessionId);
+    
+    if (result.success && result.isReturning && Array.isArray(result.registrations)) {
+      if (result.registrations.length > 0) {
+        cacheRegistrations(result.registrations);
+        if (!getSavedEmail() && result.registrations[0]?.email) {
+          setSavedEmail(result.registrations[0].email);
+        }
+        return result.registrations;
+      }
+    }
+    
+    return getCachedRegistrations();
+  } catch (err) {
+    console.warn('Network error checking status, falling back to cache:', err);
+    return getCachedRegistrations();
   }
 }
