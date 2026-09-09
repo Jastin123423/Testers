@@ -22,14 +22,11 @@ import { AppInfo, TesterRegistration } from './types';
 import { INITIAL_APPS } from './data/initialApps';
 import { 
   getOrCreateSessionId, 
-  fetchLiveTesterStatus, 
   getCachedRegistrations, 
   cacheRegistrations,
   setRegistrationTimerForAll,
   getSavedEmail,
   setSavedEmail,
-  setSavedDevice,
-  apiFetchApps,
   apiCheckEmail,
   apiRegisterTester,
   apiChangeEmail
@@ -37,7 +34,8 @@ import {
 import { Lock, Mail, Sparkles } from 'lucide-react';
 
 export default function App() {
-  const [apps, setApps] = useState<AppInfo[]>(INITIAL_APPS);
+  // Use INITIAL_APPS directly - no need to fetch from backend
+  const [apps] = useState<AppInfo[]>(INITIAL_APPS);
   const [userRegistrations, setUserRegistrations] = useState<TesterRegistration[]>(getCachedRegistrations());
   const [savedEmail, setLocalSavedEmail] = useState<string | null>(getSavedEmail());
   const [isLoading, setIsLoading] = useState(true);
@@ -50,30 +48,6 @@ export default function App() {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
 
-  // Fetch apps from backend or fallback to initial
-  const loadApps = async () => {
-    try {
-      const data = await apiFetchApps();
-      if (data.success && Array.isArray(data.apps) && data.apps.length > 0) {
-        setApps(data.apps);
-      }
-    } catch (err) {
-      console.warn('Could not fetch apps from API, using default list:', err);
-    }
-  };
-
-  // Sync user status from backend
-  const refreshUserStatus = async () => {
-    try {
-      const freshRegs = await fetchLiveTesterStatus();
-      setUserRegistrations(freshRegs);
-      const email = getSavedEmail();
-      if (email) setLocalSavedEmail(email);
-    } catch (error) {
-      console.error('Error refreshing user status:', error);
-    }
-  };
-
   // Check for returning user
   const checkReturningUser = async () => {
     const sessionId = getOrCreateSessionId();
@@ -84,8 +58,17 @@ export default function App() {
       
       if (result.success && result.isReturning) {
         if (result.registrations && result.registrations.length > 0) {
-          setUserRegistrations(result.registrations);
-          cacheRegistrations(result.registrations);
+          // Merge backend registrations with correct frontend URLs
+          const mergedRegistrations = result.registrations.map(reg => {
+            const app = INITIAL_APPS.find(a => a.id === reg.appId);
+            return {
+              ...reg,
+              testingUrl: app?.testingUrl || reg.testingUrl
+            };
+          });
+          
+          setUserRegistrations(mergedRegistrations);
+          cacheRegistrations(mergedRegistrations);
         }
         
         if (result.tester?.email && !email) {
@@ -98,17 +81,40 @@ export default function App() {
     }
   };
 
+  // Sync user status from backend
+  const refreshUserStatus = async () => {
+    try {
+      const sessionId = getOrCreateSessionId();
+      const email = getSavedEmail();
+      
+      const result = await apiCheckEmail(email || '', sessionId);
+      
+      if (result.success && result.registrations) {
+        // Merge with correct frontend URLs
+        const mergedRegistrations = result.registrations.map(reg => {
+          const app = INITIAL_APPS.find(a => a.id === reg.appId);
+          return {
+            ...reg,
+            testingUrl: app?.testingUrl || reg.testingUrl
+          };
+        });
+        
+        setUserRegistrations(mergedRegistrations);
+        cacheRegistrations(mergedRegistrations);
+      }
+    } catch (error) {
+      console.error('Error refreshing user status:', error);
+    }
+  };
+
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true);
       
-      // 1. Initialize browser session identifier
+      // Initialize browser session identifier
       getOrCreateSessionId();
 
-      // 2. Load apps list
-      await loadApps();
-
-      // 3. Check for returning user
+      // Check for returning user
       await checkReturningUser();
 
       // Check query params if #admin is in hash
@@ -122,23 +128,19 @@ export default function App() {
     initialize();
   }, []);
 
-  // Global registration: submitting email registers for all 6 apps (Android users only)
+  // Global registration: submitting email registers for all 6 apps
   const handleGlobalEmailSubmit = async (email: string): Promise<boolean> => {
     const sessionId = getOrCreateSessionId();
     const deviceId = localStorage.getItem('beta_tester_device_model') || undefined;
     
     try {
-      // Register for first app (this will create the tester)
-      // We'll use the first app as primary registration
-      const firstApp = apps[0];
-      
       const result = await apiRegisterTester({
         email,
         sessionId,
         deviceId,
-        appId: firstApp.id,
-        appName: firstApp.name,
-        platform: firstApp.platform || 'Android',
+        appId: INITIAL_APPS[0].id,
+        appName: INITIAL_APPS[0].name,
+        platform: 'Android',
       });
 
       if (!result.success) {
@@ -149,18 +151,24 @@ export default function App() {
       setSavedEmail(email);
       setLocalSavedEmail(email);
 
-      // Get all registrations for this user
+      // Get all registrations and merge with correct URLs
       const checkResult = await apiCheckEmail(email, sessionId);
       
       const regList: TesterRegistration[] = checkResult.success && Array.isArray(checkResult.registrations) 
-        ? checkResult.registrations 
-        : [result.registration];
+        ? checkResult.registrations.map(reg => {
+            const app = INITIAL_APPS.find(a => a.id === reg.appId);
+            return {
+              ...reg,
+              testingUrl: app?.testingUrl || reg.testingUrl
+            };
+          })
+        : [];
 
       setUserRegistrations(regList);
       cacheRegistrations(regList);
 
       // Set 10-minute countdown for all apps
-      const allAppIds = apps.map(a => a.id);
+      const allAppIds = INITIAL_APPS.map(a => a.id);
       setRegistrationTimerForAll(allAppIds, 10);
 
       // Show success modal
@@ -175,7 +183,7 @@ export default function App() {
     }
   };
 
-  // Single app modal submission (if ever opened)
+  // Single app modal submission
   const handleRegisterModalSubmit = async (email: string, _appId: string): Promise<TesterRegistration | null> => {
     await handleGlobalEmailSubmit(email);
     setIsRegisterModalOpen(false);
@@ -183,7 +191,6 @@ export default function App() {
   };
 
   const handleSelectAppToTry = (app: AppInfo) => {
-    // If not registered yet, scroll to hero input
     if (userRegistrations.length === 0) {
       const input = document.getElementById('input-hero-email');
       input?.focus();
@@ -219,7 +226,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
       
-      {/* Navigation */}
       <Navbar
         userRegistrations={userRegistrations}
         onOpenStatus={scrollToStatus}
@@ -227,10 +233,8 @@ export default function App() {
         onSelectAppClick={scrollToApps}
       />
 
-      {/* Main Content */}
       <main className="flex-1">
         
-        {/* Hero Section with Email-First Registration Form */}
         <Hero
           hasRegistered={hasRegistered}
           registeredEmail={currentEmail}
@@ -239,7 +243,6 @@ export default function App() {
           onExploreApps={scrollToApps}
         />
 
-        {/* Browser Memory Status Banner (shown when user has registered) */}
         {hasRegistered && (
           <ReturningUserStatus
             registrations={userRegistrations}
@@ -249,7 +252,6 @@ export default function App() {
           />
         )}
 
-        {/* Apps Section: ONLY shown when user has submitted their email or returning */}
         {hasRegistered ? (
           <section id="apps" className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
@@ -266,7 +268,6 @@ export default function App() {
               </p>
             </div>
 
-            {/* 6 Apps Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
               {apps.map((app) => {
                 const userReg = userRegistrations.find(r => r.appId === app.id);
@@ -282,7 +283,6 @@ export default function App() {
               })}
             </div>
 
-            {/* Below option for user to re-enter email if wrong email or apps not showing */}
             <div className="mt-14 text-center p-5 rounded-2xl bg-slate-800/60 border border-slate-700/60 max-w-xl mx-auto shadow-xl">
               <p className="text-xs sm:text-sm text-slate-300 mb-2 font-medium">
                 Ulikosea kuweka barua pepe yako au programu hazionekani ipasavyo?
@@ -299,7 +299,6 @@ export default function App() {
 
           </section>
         ) : (
-          /* Locked State when email is not yet filled */
           <section id="apps-locked" className="py-12 max-w-3xl mx-auto px-4 sm:px-6 text-center">
             <div className="p-8 rounded-3xl bg-slate-800/40 border border-slate-700/60 flex flex-col items-center justify-center gap-3 shadow-lg">
               <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 text-slate-400 flex items-center justify-center">
@@ -312,7 +311,6 @@ export default function App() {
                 Jaza barua pepe yako ya Gmail hapo juu ili kujiunga na majaribio ya programu zote 6 kwa wakati mmoja na kuziona mara moja.
               </p>
               
-              {/* Option to re-enter email even in locked state */}
               <div className="mt-3 pt-3 border-t border-slate-700/60 w-full flex flex-col sm:flex-row items-center justify-center gap-2 text-xs">
                 <span className="text-slate-400">Uliwahi kujisajili lakini programu hazionekani?</span>
                 <button
@@ -327,24 +325,15 @@ export default function App() {
           </section>
         )}
 
-        {/* How it Works (4 Steps) */}
         <HowItWorks />
-
-        {/* Tester Guide Instructions */}
         <TesterGuide />
-
-        {/* Swahili FAQs */}
         <FaqSection />
-
-        {/* Privacy & Trust Section */}
         <PrivacySection />
 
       </main>
 
-      {/* Footer */}
       <Footer onAdminClick={() => setIsAdminOpen(true)} />
 
-      {/* MODAL: App Selection & Registration */}
       <RegisterModal
         app={selectedAppForRegister}
         isOpen={isRegisterModalOpen}
@@ -355,20 +344,26 @@ export default function App() {
         onSubmit={handleRegisterModalSubmit}
       />
 
-      {/* MODAL: Change or Re-enter Email */}
       <ChangeEmailModal
         isOpen={isChangeEmailOpen}
         onClose={() => setIsChangeEmailOpen(false)}
         onSuccess={(updatedRegs, updatedEmail) => {
-          setUserRegistrations(updatedRegs);
+          // Merge with correct URLs
+          const mergedRegs = updatedRegs.map(reg => {
+            const app = INITIAL_APPS.find(a => a.id === reg.appId);
+            return {
+              ...reg,
+              testingUrl: app?.testingUrl || reg.testingUrl
+            };
+          });
+          setUserRegistrations(mergedRegs);
           setLocalSavedEmail(updatedEmail);
           scrollToApps();
         }}
         currentEmail={currentEmail || ''}
-        allAppIds={apps.map(a => a.id)}
+        allAppIds={INITIAL_APPS.map(a => a.id)}
       />
 
-      {/* MODAL: Submission Success with 10-Min Countdown */}
       <SubmissionSuccessModal
         registration={lastSubmittedReg}
         isOpen={isSuccessModalOpen}
@@ -376,12 +371,11 @@ export default function App() {
         onViewStatus={scrollToStatus}
       />
 
-      {/* MODAL / VIEW: Secure Admin Dashboard */}
       <AdminDashboard
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
-        apps={apps}
-        onAppsUpdated={loadApps}
+        apps={INITIAL_APPS}
+        onAppsUpdated={() => {}}
       />
 
     </div>
