@@ -1,0 +1,12 @@
+name = "beta-testers-pages"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tester"
+database_id = "73aa444a-fd90-4667-bdf2-639f17697763"
+
+[vars]
+ADMIN_PASSWORD = "your-admin-password-here"
+ADMIN_TOKEN_EXPIRY = "86400"
