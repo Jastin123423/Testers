@@ -40,7 +40,12 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
 
     try {
       setLoading(true);
-      await onSubmit(trimmedEmail, app.id);
+      const result = await onSubmit(trimmedEmail, app.id);
+      
+      if (result) {
+        // Clear the email field for next time
+        setEmail('');
+      }
     } catch (err: any) {
       setError(err.message || 'Hitilafu imetokea. Tafadhali jaribu tena.');
     } finally {
