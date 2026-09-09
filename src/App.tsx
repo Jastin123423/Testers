@@ -34,7 +34,6 @@ import {
 import { Lock, Mail, Sparkles } from 'lucide-react';
 
 export default function App() {
-  // Use INITIAL_APPS directly - no need to fetch from backend
   const [apps] = useState<AppInfo[]>(INITIAL_APPS);
   const [userRegistrations, setUserRegistrations] = useState<TesterRegistration[]>(getCachedRegistrations());
   const [savedEmail, setLocalSavedEmail] = useState<string | null>(getSavedEmail());
@@ -58,7 +57,6 @@ export default function App() {
       
       if (result.success && result.isReturning) {
         if (result.registrations && result.registrations.length > 0) {
-          // Merge backend registrations with correct frontend URLs
           const mergedRegistrations = result.registrations.map(reg => {
             const app = INITIAL_APPS.find(a => a.id === reg.appId);
             return {
@@ -90,7 +88,6 @@ export default function App() {
       const result = await apiCheckEmail(email || '', sessionId);
       
       if (result.success && result.registrations) {
-        // Merge with correct frontend URLs
         const mergedRegistrations = result.registrations.map(reg => {
           const app = INITIAL_APPS.find(a => a.id === reg.appId);
           return {
@@ -111,13 +108,9 @@ export default function App() {
     const initialize = async () => {
       setIsLoading(true);
       
-      // Initialize browser session identifier
       getOrCreateSessionId();
-
-      // Check for returning user
       await checkReturningUser();
 
-      // Check query params if #admin is in hash
       if (window.location.hash === '#admin') {
         setIsAdminOpen(true);
       }
@@ -134,6 +127,10 @@ export default function App() {
     const deviceId = localStorage.getItem('beta_tester_device_model') || undefined;
     
     try {
+      // First check if user already exists
+      const existingCheck = await apiCheckEmail(email, sessionId);
+      const isExistingUser = existingCheck.success && existingCheck.isReturning;
+
       const result = await apiRegisterTester({
         email,
         sessionId,
@@ -171,10 +168,18 @@ export default function App() {
       const allAppIds = INITIAL_APPS.map(a => a.id);
       setRegistrationTimerForAll(allAppIds, 10);
 
-      // Show success modal
-      const summaryReg = regList[0] || result.registration;
-      setLastSubmittedReg(summaryReg);
-      setIsSuccessModalOpen(true);
+      // ONLY show success modal for NEW users
+      // For existing users, just show apps directly
+      if (!isExistingUser) {
+        const summaryReg = regList[0] || result.registration;
+        setLastSubmittedReg(summaryReg);
+        setIsSuccessModalOpen(true);
+      } else {
+        // Existing user - scroll to apps after a short delay
+        setTimeout(() => {
+          scrollToApps();
+        }, 100);
+      }
 
       return true;
     } catch (error: any) {
@@ -348,7 +353,6 @@ export default function App() {
         isOpen={isChangeEmailOpen}
         onClose={() => setIsChangeEmailOpen(false)}
         onSuccess={(updatedRegs, updatedEmail) => {
-          // Merge with correct URLs
           const mergedRegs = updatedRegs.map(reg => {
             const app = INITIAL_APPS.find(a => a.id === reg.appId);
             return {
