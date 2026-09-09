@@ -10,6 +10,8 @@ export async function onRequestPost(context) {
   try {
     const { email, sessionId } = await request.json();
     
+    console.log('Check email:', { email, sessionId });
+
     let tester = null;
     
     if (email) {
@@ -24,6 +26,8 @@ export async function onRequestPost(context) {
       ).bind(sessionId).first();
     }
 
+    console.log('Tester found:', tester);
+
     const isReturning = !!tester;
     let registrations = [];
 
@@ -32,6 +36,8 @@ export async function onRequestPost(context) {
         'SELECT * FROM registrations WHERE tester_id = ? ORDER BY created_at DESC'
       ).bind(tester.id).all();
       
+      console.log('Registrations found:', regsResult.results.length);
+
       registrations = regsResult.results.map(reg => ({
         id: reg.id,
         appId: reg.app_id,
@@ -59,6 +65,7 @@ export async function onRequestPost(context) {
       registrations
     }), { headers: corsHeaders });
   } catch (error) {
+    console.error('Check email error:', error);
     return new Response(JSON.stringify({
       success: false,
       message: error.message
