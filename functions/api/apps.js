@@ -1,3 +1,4 @@
+// functions/api/apps.js
 export async function onRequestGet(context) {
   const { env } = context;
   const corsHeaders = {
@@ -12,25 +13,29 @@ export async function onRequestGet(context) {
       'SELECT * FROM apps WHERE is_active = 1 ORDER BY name'
     ).all();
 
+    // Always return default apps if database is empty
+    const defaultApps = getDefaultApps();
+    
     if (apps.results.length === 0) {
       return new Response(JSON.stringify({
         success: true,
-        apps: getDefaultApps()
+        apps: defaultApps
       }), { headers: corsHeaders });
     }
 
+    // Parse features JSON for each app
     const parsedApps = apps.results.map(app => ({
       id: app.id,
       name: app.name,
-      tagline: app.tagline,
-      description: app.description,
-      category: app.category,
-      platform: app.platform,
-      iconName: app.icon_name,
-      accentColor: app.accent_color,
-      testingUrl: app.testing_url,
+      tagline: app.tagline || '',
+      description: app.description || '',
+      category: app.category || 'Tools',
+      platform: app.platform || 'Android',
+      iconName: app.icon_name || 'file-text',
+      accentColor: app.accent_color || '#06b6d4',
+      testingUrl: app.testing_url || 'https://play.google.com/apps/testing/',
       isActive: app.is_active === 1,
-      features: app.features ? JSON.parse(app.features) : [],
+      features: app.features ? JSON.parse(app.features) : ['Feature 1', 'Feature 2', 'Feature 3'],
       dualCameraNote: app.dual_camera_note,
       privateAreaNote: app.private_area_note
     }));
@@ -40,13 +45,11 @@ export async function onRequestGet(context) {
       apps: parsedApps
     }), { headers: corsHeaders });
   } catch (error) {
+    console.error('Error fetching apps:', error);
     return new Response(JSON.stringify({
-      success: false,
-      message: error.message
-    }), { 
-      status: 500,
-      headers: corsHeaders 
-    });
+      success: true,
+      apps: getDefaultApps()
+    }), { headers: corsHeaders });
   }
 }
 
@@ -68,6 +71,7 @@ function getDefaultApps() {
       tagline: 'Read, edit & convert PDF files',
       description: 'Complete PDF solution for Android',
       category: 'Productivity',
+      platform: 'Android',
       iconName: 'file-text',
       accentColor: '#ef4444',
       testingUrl: 'https://play.google.com/apps/testing/com.pdf.office',
@@ -80,6 +84,7 @@ function getDefaultApps() {
       tagline: 'Record your screen in HD',
       description: 'Best screen recording app',
       category: 'Tools',
+      platform: 'Android',
       iconName: 'video',
       accentColor: '#8b5cf6',
       testingUrl: 'https://play.google.com/apps/testing/com.screen.recorder',
@@ -93,6 +98,7 @@ function getDefaultApps() {
       tagline: 'Find your dream job',
       description: 'Job search platform',
       category: 'Business',
+      platform: 'Android',
       iconName: 'briefcase',
       accentColor: '#06b6d4',
       testingUrl: 'https://play.google.com/apps/testing/com.jobsreport',
@@ -105,6 +111,7 @@ function getDefaultApps() {
       tagline: 'Listen to your favorite music',
       description: 'Music player with amazing features',
       category: 'Entertainment',
+      platform: 'Android',
       iconName: 'music',
       accentColor: '#f59e0b',
       testingUrl: 'https://play.google.com/apps/testing/com.music.play',
@@ -117,6 +124,7 @@ function getDefaultApps() {
       tagline: 'Manage your files easily',
       description: 'Powerful file manager',
       category: 'Tools',
+      platform: 'Android',
       iconName: 'folder',
       accentColor: '#10b981',
       testingUrl: 'https://play.google.com/apps/testing/com.file.manager',
@@ -130,6 +138,7 @@ function getDefaultApps() {
       tagline: 'Smart calculator',
       description: 'Advanced calculator for Android',
       category: 'Productivity',
+      platform: 'Android',
       iconName: 'calculator',
       accentColor: '#3b82f6',
       testingUrl: 'https://play.google.com/apps/testing/com.int.calculator',
