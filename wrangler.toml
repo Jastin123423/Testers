@@ -8,5 +8,5 @@ database_name = "tester"
 database_id = "73aa444a-fd90-4667-bdf2-639f17697763"
 
 [vars]
-ADMIN_PASSWORD = "your-admin-password-here"
+ADMIN_PASSWORD = "52775277"
 ADMIN_TOKEN_EXPIRY = "86400"
