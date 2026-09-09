@@ -127,164 +127,182 @@ async function startServer() {
 
   // Register tester for all apps
   app.post('/api/register', (req, res) => {
-    const { email, sessionId, deviceInfo, appId } = req.body;
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const { email, sessionId, deviceInfo } = req.body || {};
 
-    const clientKey = sessionId || (req.ip || 'unknown');
-    if (!checkRateLimit(clientKey)) {
-      return res.status(429).json({
+      const clientKey = sessionId || (req.ip || 'unknown');
+      if (!checkRateLimit(clientKey)) {
+        return res.status(429).json({
+          success: false,
+          message: 'Majaribio mengi mno. Tafadhali subiri dakika chache kabla ya kujaribu tena.',
+        });
+      }
+
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ success: false, message: 'Tafadhali weka barua pepe (Gmail).' });
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return res.status(400).json({ success: false, message: 'Barua pepe uliyoweka haina muundo sahihi (mfano: jina@gmail.com).' });
+      }
+
+      const cleanSessionId = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : crypto.randomUUID();
+      const now = new Date().toISOString();
+      const activeApps = db.apps.filter(a => a.isActive);
+
+      if (activeApps.length === 0) {
+        return res.status(400).json({ success: false, message: 'Hakuna programu zilizo tayari kwa sasa.' });
+      }
+
+      // Register user for ALL active apps at once
+      const userRegs: TesterRegistration[] = [];
+
+      for (const app of activeApps) {
+        const existingIndex = db.testers.findIndex(
+          t => (t.sessionId === cleanSessionId && t.appId === app.id) ||
+               (t.email.toLowerCase() === cleanEmail && t.appId === app.id)
+        );
+
+        if (existingIndex >= 0) {
+          const existing = db.testers[existingIndex];
+          existing.sessionId = cleanSessionId;
+          existing.email = cleanEmail;
+          existing.appName = app.name;
+          existing.updatedAt = now;
+          if (deviceInfo) existing.deviceInfo = String(deviceInfo).trim();
+          userRegs.push(existing);
+        } else {
+          const newReg: TesterRegistration = {
+            id: 'tester_' + crypto.randomUUID().slice(0, 10),
+            email: cleanEmail,
+            appId: app.id,
+            appName: app.name,
+            sessionId: cleanSessionId,
+            status: 'pending',
+            createdAt: now,
+            updatedAt: now,
+            deviceInfo: typeof deviceInfo === 'string' && deviceInfo.trim() ? deviceInfo.trim() : undefined,
+          };
+          db.testers.unshift(newReg);
+          userRegs.push(newReg);
+        }
+      }
+
+      saveDatabase(db);
+
+      const enriched = userRegs.map(reg => {
+        const app = db.apps.find(a => a.id === reg.appId);
+        return {
+          ...reg,
+          appName: app ? app.name : reg.appName,
+          testingUrl: reg.status === 'approved' && app ? app.testingUrl : undefined,
+        };
+      });
+
+      return res.json({
+        success: true,
+        message: 'Usajili wako wa majaribio ya programu zote umepokelewa kikamilifu!',
+        registrations: enriched,
+        email: cleanEmail,
+        sessionId: cleanSessionId,
+      });
+    } catch (err: any) {
+      console.error('Error in /api/register:', err);
+      return res.status(500).json({
         success: false,
-        message: 'Majaribio mengi mno. Tafadhali subiri dakika chache kabla ya kujaribu tena.',
+        message: 'Hitilafu ya seva wakati wa kusajili. Tafadhali jaribu tena.',
       });
     }
-
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ success: false, message: 'Tafadhali weka barua pepe (Gmail).' });
-    }
-
-    const cleanEmail = email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(cleanEmail)) {
-      return res.status(400).json({ success: false, message: 'Barua pepe uliyoweka haina muundo sahihi (mfano: jina@gmail.com).' });
-    }
-
-    const cleanSessionId = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : crypto.randomUUID();
-    const now = new Date().toISOString();
-    const activeApps = db.apps.filter(a => a.isActive);
-
-    if (activeApps.length === 0) {
-      return res.status(400).json({ success: false, message: 'Hakuna programu zilizo tayari kwa sasa.' });
-    }
-
-    // Register user for ALL active apps at once
-    const userRegs: TesterRegistration[] = [];
-
-    for (const app of activeApps) {
-      const existingIndex = db.testers.findIndex(
-        t => (t.sessionId === cleanSessionId && t.appId === app.id) ||
-             (t.email.toLowerCase() === cleanEmail && t.appId === app.id)
-      );
-
-      if (existingIndex >= 0) {
-        const existing = db.testers[existingIndex];
-        existing.sessionId = cleanSessionId;
-        existing.email = cleanEmail;
-        existing.appName = app.name;
-        existing.updatedAt = now;
-        if (deviceInfo) existing.deviceInfo = String(deviceInfo).trim();
-        userRegs.push(existing);
-      } else {
-        const newReg: TesterRegistration = {
-          id: 'tester_' + crypto.randomUUID().slice(0, 10),
-          email: cleanEmail,
-          appId: app.id,
-          appName: app.name,
-          sessionId: cleanSessionId,
-          status: 'pending',
-          createdAt: now,
-          updatedAt: now,
-          deviceInfo: typeof deviceInfo === 'string' && deviceInfo.trim() ? deviceInfo.trim() : undefined,
-        };
-        db.testers.unshift(newReg);
-        userRegs.push(newReg);
-      }
-    }
-
-    saveDatabase(db);
-
-    const enriched = userRegs.map(reg => {
-      const app = db.apps.find(a => a.id === reg.appId);
-      return {
-        ...reg,
-        appName: app ? app.name : reg.appName,
-        testingUrl: reg.status === 'approved' && app ? app.testingUrl : undefined,
-      };
-    });
-
-    res.json({
-      success: true,
-      message: 'Usajili wako wa majaribio ya programu zote umepokelewa kikamilifu!',
-      registrations: enriched,
-      email: cleanEmail,
-      sessionId: cleanSessionId,
-    });
   });
 
   // Change or recover email / re-register with corrected email
   app.post('/api/change-email', (req, res) => {
-    const { oldEmail, newEmail, sessionId, deviceInfo } = req.body;
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const { oldEmail, newEmail, sessionId, deviceInfo } = req.body || {};
 
-    if (!newEmail || typeof newEmail !== 'string') {
-      return res.status(400).json({ success: false, message: 'Tafadhali weka barua pepe mpya (Gmail).' });
-    }
+      if (!newEmail || typeof newEmail !== 'string') {
+        return res.status(400).json({ success: false, message: 'Tafadhali weka barua pepe mpya (Gmail).' });
+      }
 
-    const cleanNewEmail = newEmail.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(cleanNewEmail)) {
-      return res.status(400).json({ success: false, message: 'Barua pepe uliyoweka haina muundo sahihi (mfano: jina@gmail.com).' });
-    }
+      const cleanNewEmail = newEmail.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanNewEmail)) {
+        return res.status(400).json({ success: false, message: 'Barua pepe uliyoweka haina muundo sahihi (mfano: jina@gmail.com).' });
+      }
 
-    const cleanSessionId = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : crypto.randomUUID();
-    const cleanOldEmail = typeof oldEmail === 'string' ? oldEmail.trim().toLowerCase() : '';
-    const now = new Date().toISOString();
-    const activeApps = db.apps.filter(a => a.isActive);
+      const cleanSessionId = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : crypto.randomUUID();
+      const cleanOldEmail = typeof oldEmail === 'string' ? oldEmail.trim().toLowerCase() : '';
+      const now = new Date().toISOString();
+      const activeApps = db.apps.filter(a => a.isActive);
 
-    // Find any existing registrations tied to this session OR oldEmail OR newEmail
-    const existingMatches = db.testers.filter(t =>
-      (cleanSessionId && t.sessionId === cleanSessionId) ||
-      (cleanOldEmail && t.email.toLowerCase() === cleanOldEmail) ||
-      t.email.toLowerCase() === cleanNewEmail
-    );
+      // Find any existing registrations tied to this session OR oldEmail OR newEmail
+      const existingMatches = db.testers.filter(t =>
+        (cleanSessionId && t.sessionId === cleanSessionId) ||
+        (cleanOldEmail && t.email.toLowerCase() === cleanOldEmail) ||
+        t.email.toLowerCase() === cleanNewEmail
+      );
 
-    if (existingMatches.length > 0) {
-      existingMatches.forEach(t => {
-        t.email = cleanNewEmail;
-        t.sessionId = cleanSessionId;
-        t.updatedAt = now;
-        if (deviceInfo) t.deviceInfo = String(deviceInfo).trim();
+      if (existingMatches.length > 0) {
+        existingMatches.forEach(t => {
+          t.email = cleanNewEmail;
+          t.sessionId = cleanSessionId;
+          t.updatedAt = now;
+          if (deviceInfo) t.deviceInfo = String(deviceInfo).trim();
+        });
+      }
+
+      // Ensure all active apps have an entry
+      for (const app of activeApps) {
+        const hasApp = existingMatches.some(t => t.appId === app.id);
+        if (!hasApp) {
+          const newReg: TesterRegistration = {
+            id: 'tester_' + crypto.randomUUID().slice(0, 10),
+            email: cleanNewEmail,
+            appId: app.id,
+            appName: app.name,
+            sessionId: cleanSessionId,
+            status: 'pending',
+            createdAt: now,
+            updatedAt: now,
+            deviceInfo: typeof deviceInfo === 'string' && deviceInfo.trim() ? deviceInfo.trim() : undefined,
+          };
+          db.testers.unshift(newReg);
+        }
+      }
+
+      saveDatabase(db);
+
+      const userRegistrations = db.testers.filter(t => 
+        t.sessionId === cleanSessionId || t.email.toLowerCase() === cleanNewEmail
+      );
+
+      const enriched = userRegistrations.map(reg => {
+        const app = db.apps.find(a => a.id === reg.appId);
+        return {
+          ...reg,
+          appName: app ? app.name : reg.appName,
+          testingUrl: reg.status === 'approved' && app ? app.testingUrl : undefined,
+        };
+      });
+
+      return res.json({
+        success: true,
+        message: 'Barua pepe imesasishwa kikamilifu! Programu zote zimefunguliwa.',
+        registrations: enriched,
+        email: cleanNewEmail,
+        sessionId: cleanSessionId,
+      });
+    } catch (err: any) {
+      console.error('Error in /api/change-email:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Hitilafu ya seva wakati wa kusasisha barua pepe. Tafadhali jaribu tena.',
       });
     }
-
-    // Ensure all active apps have an entry
-    for (const app of activeApps) {
-      const hasApp = existingMatches.some(t => t.appId === app.id);
-      if (!hasApp) {
-        const newReg: TesterRegistration = {
-          id: 'tester_' + crypto.randomUUID().slice(0, 10),
-          email: cleanNewEmail,
-          appId: app.id,
-          appName: app.name,
-          sessionId: cleanSessionId,
-          status: 'pending',
-          createdAt: now,
-          updatedAt: now,
-          deviceInfo: typeof deviceInfo === 'string' && deviceInfo.trim() ? deviceInfo.trim() : undefined,
-        };
-        db.testers.unshift(newReg);
-      }
-    }
-
-    saveDatabase(db);
-
-    const userRegistrations = db.testers.filter(t => 
-      t.sessionId === cleanSessionId || t.email.toLowerCase() === cleanNewEmail
-    );
-
-    const enriched = userRegistrations.map(reg => {
-      const app = db.apps.find(a => a.id === reg.appId);
-      return {
-        ...reg,
-        appName: app ? app.name : reg.appName,
-        testingUrl: reg.status === 'approved' && app ? app.testingUrl : undefined,
-      };
-    });
-
-    res.json({
-      success: true,
-      message: 'Barua pepe imesasishwa kikamilifu! Programu zote zimefunguliwa.',
-      registrations: enriched,
-      email: cleanNewEmail,
-      sessionId: cleanSessionId,
-    });
   });
 
   // Get tester registrations for a browser sessionId or email

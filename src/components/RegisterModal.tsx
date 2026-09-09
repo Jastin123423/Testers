@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, ShieldAlert, Sparkles, AlertCircle, Smartphone } from 'lucide-react';
+import { X, Mail, Sparkles, AlertCircle, AlertTriangle } from 'lucide-react';
 import { AppInfo, TesterRegistration } from '../types';
 import { AppIcon } from './AppIcon';
 
@@ -7,7 +7,7 @@ interface RegisterModalProps {
   app: AppInfo | null;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (email: string, appId: string, deviceInfo?: string) => Promise<TesterRegistration | null>;
+  onSubmit: (email: string, appId: string) => Promise<TesterRegistration | null>;
 }
 
 export const RegisterModal: React.FC<RegisterModalProps> = ({
@@ -17,7 +17,6 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   onSubmit,
 }) => {
   const [email, setEmail] = useState('');
-  const [deviceInfo, setDeviceInfo] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,7 +26,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
     e.preventDefault();
     setError(null);
 
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail) {
       setError('Tafadhali ingiza anwani ya barua pepe (Gmail).');
       return;
@@ -39,20 +38,9 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
       return;
     }
 
-    // Friendly prompt if email is not @gmail.com or @googlemail.com
-    if (!trimmedEmail.toLowerCase().endsWith('@gmail.com') && !trimmedEmail.toLowerCase().endsWith('@googlemail.com')) {
-      const proceed = window.confirm(
-        'Kwa kawaida Google Play hutumia akaunti ya Gmail (@gmail.com). Je, una uhakika hii ndiyo akaunti uliyoiunganisha kwenye Google Play Store kwenye simu yako?'
-      );
-      if (!proceed) return;
-    }
-
     try {
       setLoading(true);
-      const res = await onSubmit(trimmedEmail, app.id, deviceInfo.trim() || undefined);
-      if (res) {
-        // Success handled by parent modal switch
-      }
+      await onSubmit(trimmedEmail, app.id);
     } catch (err: any) {
       setError(err.message || 'Hitilafu imetokea. Tafadhali jaribu tena.');
     } finally {
@@ -102,7 +90,15 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
             </div>
           </div>
 
-          <p className="text-xs text-slate-400 mt-2 mb-6 leading-relaxed">
+          {/* Android Only notice */}
+          <div className="my-4 p-3 rounded-2xl bg-amber-950/40 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-200">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <strong className="text-amber-300">Watumiaji wa Android Pekee:</strong> Programu hii inapatikana kupitia Google Play Store kwenye simu za Android pekee.
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-400 mb-5 leading-relaxed">
             Ingiza Gmail unayotumia kwenye Google Play kwenye simu yako ili msimamizi aweze kukupa idhini ya kupakua app hii katika awamu ya closed test.
           </p>
 
@@ -131,36 +127,6 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                   className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm font-medium transition-all"
                 />
               </div>
-
-              <div className="mt-2 text-[11px] text-slate-400 flex items-start gap-1.5">
-                <ShieldAlert className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                <span>
-                  Hakikisha ni anwani ile ile ya Google/Gmail utakayotumia kwenye Google Play Store kwenye simu yako ya Android.
-                </span>
-              </div>
-            </div>
-
-            {/* Optional Device Model input */}
-            <div>
-              <label 
-                htmlFor="input-device" 
-                className="block text-xs font-semibold text-slate-400 mb-1.5"
-              >
-                Aina ya Simu (Hiari - mfano: Samsung Galaxy, Tecno, Infinix, Redmi):
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Smartphone className="w-4 h-4" />
-                </div>
-                <input
-                  id="input-device"
-                  type="text"
-                  value={deviceInfo}
-                  onChange={(e) => setDeviceInfo(e.target.value)}
-                  placeholder="Mfano: Tecno Spark 10 au Samsung A14"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
-                />
-              </div>
             </div>
 
             {/* Error Message */}
@@ -172,7 +138,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
             )}
 
             {/* Submit Button */}
-            <div className="pt-3">
+            <div className="pt-2">
               <button
                 id="btn-submit-registration"
                 type="submit"

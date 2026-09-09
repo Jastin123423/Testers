@@ -136,6 +136,137 @@
   ],
   "testers": [
     {
+      "id": "tester_8d403114-a",
+      "email": "updatedtester@gmail.com",
+      "appId": "int-calculator",
+      "appName": "Int Calculator",
+      "sessionId": "sess_test_999",
+      "status": "pending",
+      "createdAt": "2026-09-09T14:02:22.035Z",
+      "updatedAt": "2026-09-09T14:02:47.202Z"
+    },
+    {
+      "id": "tester_a568ed4b-0",
+      "email": "updatedtester@gmail.com",
+      "appId": "top-file-manager",
+      "appName": "Top File Manager",
+      "sessionId": "sess_test_999",
+      "status": "pending",
+      "createdAt": "2026-09-09T14:02:22.035Z",
+      "updatedAt": "2026-09-09T14:02:47.202Z"
+    },
+    {
+      "id": "tester_5d850e5a-1",
+      "email": "updatedtester@gmail.com",
+      "appId": "music-play",
+      "appName": "Music Play",
+      "sessionId": "sess_test_999",
+      "status": "pending",
+      "createdAt": "2026-09-09T14:02:22.035Z",
+      "updatedAt": "2026-09-09T14:02:47.202Z"
+    },
+    {
+      "id": "tester_6b72dd2b-9",
+      "email": "updatedtester@gmail.com",
+      "appId": "jobsreport",
+      "appName": "JobsReport",
+      "sessionId": "sess_test_999",
+      "status": "pending",
+      "createdAt": "2026-09-09T14:02:22.035Z",
+      "updatedAt": "2026-09-09T14:02:47.202Z"
+    },
+    {
+      "id": "tester_af821d9d-e",
+      "email": "updatedtester@gmail.com",
+      "appId": "free-screen-recorder",
+      "appName": "Free Screen Recorder",
+      "sessionId": "sess_test_999",
+      "status": "pending",
+      "createdAt": "2026-09-09T14:02:22.035Z",
+      "updatedAt": "2026-09-09T14:02:47.202Z"
+    },
+    {
+      "id": "tester_3dc3152a-3",
+      "email": "updatedtester@gmail.com",
+      "appId": "pdf-office",
+      "appName": "PDF Office",
+      "sessionId": "sess_test_999",
+      "status": "pending",
+      "createdAt": "2026-09-09T14:02:22.035Z",
+      "updatedAt": "2026-09-09T14:02:47.202Z"
+    },
+    {
+      "id": "tester_5a8e956d-6",
+      "email": "jjovinatha@gmail.com",
+      "appId": "int-calculator",
+      "appName": "Int Calculator",
+      "sessionId": "sess_12345",
+      "status": "pending",
+      "createdAt": "2026-09-09T13:57:47.254Z",
+      "updatedAt": "2026-09-09T13:57:47.254Z"
+    },
+    {
+      "id": "tester_b80b7d0f-e",
+      "email": "jjovinatha@gmail.com",
+      "appId": "top-file-manager",
+      "appName": "Top File Manager",
+      "sessionId": "sess_12345",
+      "status": "pending",
+      "createdAt": "2026-09-09T13:57:47.254Z",
+      "updatedAt": "2026-09-09T13:57:47.254Z"
+    },
+    {
+      "id": "tester_8087f1ca-1",
+      "email": "jjovinatha@gmail.com",
+      "appId": "music-play",
+      "appName": "Music Play",
+      "sessionId": "sess_12345",
+      "status": "pending",
+      "createdAt": "2026-09-09T13:57:47.254Z",
+      "updatedAt": "2026-09-09T13:57:47.254Z"
+    },
+    {
+      "id": "tester_6d430073-6",
+      "email": "jjovinatha@gmail.com",
+      "appId": "jobsreport",
+      "appName": "JobsReport",
+      "sessionId": "sess_12345",
+      "status": "pending",
+      "createdAt": "2026-09-09T13:57:47.254Z",
+      "updatedAt": "2026-09-09T13:57:47.254Z"
+    },
+    {
+      "id": "tester_87f819c7-8",
+      "email": "jjovinatha@gmail.com",
+      "appId": "free-screen-recorder",
+      "appName": "Free Screen Recorder",
+      "sessionId": "sess_12345",
+      "status": "pending",
+      "createdAt": "2026-09-09T13:57:47.254Z",
+      "updatedAt": "2026-09-09T13:57:47.254Z"
+    },
+    {
+      "id": "tester_0adb6d91-4",
+      "email": "jjovinatha@gmail.com",
+      "appId": "pdf-office",
+      "appName": "PDF Office",
+      "sessionId": "sess_12345",
+      "status": "pending",
+      "createdAt": "2026-09-09T13:57:47.254Z",
+      "updatedAt": "2026-09-09T13:57:47.254Z"
+    },
+    {
+      "id": "tester_bc634dbd-a",
+      "email": "joycejay583@gmail.com",
+      "appId": "pdf-office",
+      "appName": "PDF Office",
+      "sessionId": "sess_mtu4c6hv_ffyg0rkc",
+      "status": "approved",
+      "createdAt": "2026-09-09T13:16:02.109Z",
+      "updatedAt": "2026-09-09T13:17:12.533Z",
+      "approvedAt": "2026-09-09T13:17:12.533Z"
+    },
+    {
       "id": "tester_c7721146-a",
       "email": "mtanzania@gmail.com",
       "appId": "pdf-office",
@@ -151,6 +282,10 @@
     "adm_fc09b5b75333dd1ba3fa37124feddd918d0825cea8297e58": {
       "createdAt": 1788959456121,
       "expiresAt": 1789564256121
+    },
+    "adm_577cc1c1b827ad8a6ca1324fb7e9b2d1556c9c55dd6eff27": {
+      "createdAt": 1788959683894,
+      "expiresAt": 1789564483894
     }
   }
 }

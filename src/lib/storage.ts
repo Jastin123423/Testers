@@ -146,7 +146,8 @@ export async function fetchLiveTesterStatus(overrideEmail?: string): Promise<Tes
 
     const res = await fetch(`/api/tester-status?${queryParams.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch status');
-    const data = await res.json();
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
     if (data.success && Array.isArray(data.registrations)) {
       if (data.registrations.length > 0) {
         cacheRegistrations(data.registrations);

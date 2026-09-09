@@ -9,13 +9,14 @@ import {
   Mail, 
   HelpCircle, 
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 interface HeroProps {
   hasRegistered: boolean;
   registeredEmail: string | null;
-  onSubmitEmail: (email: string, deviceInfo?: string) => Promise<boolean>;
+  onSubmitEmail: (email: string) => Promise<boolean>;
   onOpenChangeEmail: () => void;
   onExploreApps: () => void;
 }
@@ -28,7 +29,6 @@ export const Hero: React.FC<HeroProps> = ({
   onExploreApps,
 }) => {
   const [emailInput, setEmailInput] = useState('');
-  const [deviceInput, setDeviceInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -45,13 +45,12 @@ export const Hero: React.FC<HeroProps> = ({
 
     setSubmitting(true);
     try {
-      const ok = await onSubmitEmail(cleanEmail, deviceInput.trim() || undefined);
+      const ok = await onSubmitEmail(cleanEmail);
       if (ok) {
         setEmailInput('');
-        setDeviceInput('');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Hitilafu imetokea. Tafadhali jaribu tena.');
+      setErrorMsg(err.message || 'Hitilafu imetokea wakati wa kusajili. Tafadhali jaribu tena.');
     } finally {
       setSubmitting(false);
     }
@@ -68,13 +67,10 @@ export const Hero: React.FC<HeroProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto">
           
-          {/* Top Pill / Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-800/80 border border-slate-700/80 text-cyan-300 shadow-sm mb-6">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-            </span>
-            <span>Programu Rasmi ya Android Beta Testing Tanzania</span>
+          {/* Android-Only Notice Pill / Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 border border-amber-500/30 text-amber-300 shadow-sm mb-6">
+            <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+            <span>Kwa Watumiaji wa Vifaa vya Android Pekee (Google Play)</span>
           </div>
 
           {/* Headline */}
@@ -90,11 +86,11 @@ export const Hero: React.FC<HeroProps> = ({
             {hasRegistered ? (
               <>Umesajiliwa kikamilifu! Apps zote 6 sasa zinaonekana hapa chini tayari kwa majaribio na viungo vya Google Play Store.</>
             ) : (
-              <>Weka barua pepe yako ya Gmail hapa chini kujiunga na majaribio ya programu zote 6 kwa wakati mmoja. Baada ya kuwasilisha, programu zote zitafunguliwa mara moja.</>
+              <>Weka barua pepe yako ya Gmail hapa chini ili kujiunga na majaribio ya programu zote 6 kwa wakati mmoja. Programu zitafunguliwa mara moja baada ya kutuma.</>
             )}
           </p>
 
-          {/* STATE 1: NOT REGISTERED YET (FIRST TIME VISITOR) -> SHOW EMAIL SUBMISSION FORM */}
+          {/* STATE 1: NOT REGISTERED YET (FIRST TIME VISITOR) -> SHOW EMAIL ONLY FORM */}
           {!hasRegistered ? (
             <div className="mt-8 max-w-xl mx-auto">
               <div className="relative rounded-3xl bg-gradient-to-b from-slate-800/90 to-slate-900/95 border border-cyan-500/30 p-6 sm:p-8 shadow-2xl shadow-cyan-500/10 backdrop-blur-xl text-left">
@@ -108,8 +104,17 @@ export const Hero: React.FC<HeroProps> = ({
                       Weka Gmail Kufungua Apps Zote
                     </h2>
                     <p className="text-xs text-slate-400">
-                      Usajili mmoja kwa ajili ya programu zote 6 za Android
+                      Usajili mmoja kwa ajili ya programu zote 6
                     </p>
+                  </div>
+                </div>
+
+                {/* Explicit Notice: Android Users Only */}
+                <div className="mb-5 p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/30 flex items-start gap-3 text-xs text-amber-200">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <strong className="text-amber-300 font-bold">MUHIMU SANA: </strong>
+                    Majaribio haya ni kwa watumiaji wa simu au vidonge vya <span className="underline font-bold text-white">Android pekee</span> (Google Play Store). Simu za iPhone / iOS haziwezi kupakua programu hizi.
                   </div>
                 </div>
 
@@ -121,6 +126,7 @@ export const Hero: React.FC<HeroProps> = ({
                 )}
 
                 <form onSubmit={handleFormSubmit} className="space-y-4">
+                  {/* Email Input ONLY */}
                   <div>
                     <label className="block text-xs font-bold text-slate-200 mb-1.5">
                       Barua Pepe ya Gmail (Inayotumika Play Store) <span className="text-cyan-400">*</span>:
@@ -137,23 +143,9 @@ export const Hero: React.FC<HeroProps> = ({
                         className="w-full pl-10 pr-4 py-3.5 rounded-xl bg-slate-800/90 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all shadow-inner"
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
-                      Aina ya Simu yako (Hiari):
-                    </label>
-                    <div className="relative">
-                      <Smartphone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        id="input-hero-device"
-                        type="text"
-                        value={deviceInput}
-                        onChange={(e) => setDeviceInput(e.target.value)}
-                        placeholder="mfano: TECNO Spark, Samsung Galaxy, Redmi"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
-                      />
-                    </div>
+                    <p className="mt-1.5 text-[11px] text-slate-400">
+                      Hakikisha ni anwani ya Gmail unayotumia kwenye programu ya Google Play kwenye simu yako ya Android.
+                    </p>
                   </div>
 
                   <button
@@ -227,8 +219,8 @@ export const Hero: React.FC<HeroProps> = ({
                 <Smartphone className="w-5 h-5" />
               </div>
               <div>
-                <div className="font-bold text-sm text-white">Apps 6 Mpya</div>
-                <div className="text-xs text-slate-400">Android pekee</div>
+                <div className="font-bold text-sm text-white">Android Pekee</div>
+                <div className="text-xs text-slate-400">Apps 6 Mpya</div>
               </div>
             </div>
 

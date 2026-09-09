@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { Mail, Smartphone, AlertCircle, CheckCircle2, X, ArrowRight } from 'lucide-react';
+import { Mail, Smartphone, AlertCircle, CheckCircle2, X, ArrowRight, AlertTriangle } from 'lucide-react';
 import { TesterRegistration } from '../types';
 import { 
   getOrCreateSessionId, 
   getSavedEmail, 
   setSavedEmail, 
-  setSavedDevice, 
-  getSavedDevice,
   cacheRegistrations,
   setRegistrationTimerForAll
 } from '../lib/storage';
@@ -28,7 +26,6 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
 }) => {
   const existingEmail = currentEmail || getSavedEmail() || '';
   const [email, setEmail] = useState('');
-  const [deviceInfo, setDeviceInfo] = useState(getSavedDevice() || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -58,20 +55,22 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
           oldEmail: existingEmail,
           newEmail: cleanEmail,
           sessionId,
-          deviceInfo: deviceInfo.trim() || undefined,
         }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error('Hitilafu ya mtandao au seva. Tafadhali jaribu tena.');
+      }
 
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Hitilafu imetokea wakati wa kusasisha barua pepe.');
       }
 
       setSavedEmail(cleanEmail);
-      if (deviceInfo.trim()) {
-        setSavedDevice(deviceInfo.trim());
-      }
       if (Array.isArray(data.registrations) && data.registrations.length > 0) {
         cacheRegistrations(data.registrations);
         setRegistrationTimerForAll(allAppIds, 10);
@@ -110,7 +109,7 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
         </button>
 
         {/* Title & Icon */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-3">
           <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center shrink-0">
             <Mail className="w-6 h-6" />
           </div>
@@ -124,9 +123,13 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
           </div>
         </div>
 
-        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-5">
-          Ingiza barua pepe sahihi ya Gmail hapa chini. Mfumo utasasisha usajili wako na kufungua programu zote 6 mara moja.
-        </p>
+        {/* Android-Only Notice */}
+        <div className="mb-4 p-3 rounded-2xl bg-amber-950/40 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-200">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="leading-snug">
+            <strong className="text-amber-300">Android Pekee:</strong> Majaribio haya ni kwa ajili ya simu za Android zinazotumia Google Play Store.
+          </div>
+        </div>
 
         {existingEmail && (
           <div className="mb-4 px-3.5 py-2 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs text-slate-300 flex items-center justify-between">
@@ -171,22 +174,6 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
             <p className="mt-1 text-[11px] text-slate-400">
               Hakikisha ni Gmail unayotumia kwenye simu yako ya Android kupakua apps kutoka Google Play Store.
             </p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-200 mb-1.5">
-              Mfano wa Simu / Kifaa chako (Hiari):
-            </label>
-            <div className="relative">
-              <Smartphone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={deviceInfo}
-                onChange={(e) => setDeviceInfo(e.target.value)}
-                placeholder="mfano: Samsung Galaxy A14, TECNO Camon 20"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
-              />
-            </div>
           </div>
 
           <div className="pt-2 flex items-center justify-end gap-3">

@@ -50,7 +50,8 @@ export default function App() {
     try {
       const res = await fetch('/api/apps');
       if (res.ok) {
-        const data = await res.json();
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : {};
         if (data.success && Array.isArray(data.apps) && data.apps.length > 0) {
           setApps(data.apps);
         }
@@ -84,21 +85,31 @@ export default function App() {
     }
   }, []);
 
-  // Global registration: submitting email registers for all 6 apps
-  const handleGlobalEmailSubmit = async (email: string, deviceInfo?: string): Promise<boolean> => {
+  // Global registration: submitting email registers for all 6 apps (Android users only)
+  const handleGlobalEmailSubmit = async (email: string): Promise<boolean> => {
     const sessionId = getOrCreateSessionId();
     
-    const response = await fetch('/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        sessionId,
-        deviceInfo,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          sessionId,
+        }),
+      });
+    } catch (networkErr: any) {
+      throw new Error('Hitilafu ya muunganisho wa mtandao. Tafadhali angalia intaneti yako na ujaribu tena.');
+    }
 
-    const data = await response.json();
+    const text = await response.text();
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error('Huduma haikutoa majibu sahihi kwa sasa. Tafadhali jaribu tena baada ya muda mfupi.');
+    }
 
     if (!response.ok || !data.success) {
       throw new Error(data.message || 'Hitilafu ya kusajili. Tafadhali jaribu tena.');
@@ -109,7 +120,6 @@ export default function App() {
     cacheRegistrations(regList);
     setSavedEmail(email);
     setLocalSavedEmail(email);
-    if (deviceInfo) setSavedDevice(deviceInfo);
 
     // Set 10-minute countdown for all apps
     const allAppIds = apps.map(a => a.id);
@@ -133,8 +143,8 @@ export default function App() {
   };
 
   // Single app modal submission (if ever opened)
-  const handleRegisterModalSubmit = async (email: string, _appId: string, deviceInfo?: string): Promise<TesterRegistration | null> => {
-    await handleGlobalEmailSubmit(email, deviceInfo);
+  const handleRegisterModalSubmit = async (email: string, _appId: string): Promise<TesterRegistration | null> => {
+    await handleGlobalEmailSubmit(email);
     setIsRegisterModalOpen(false);
     return lastSubmittedReg;
   };
