@@ -1,4 +1,3 @@
-// functions/api/register.js
 export async function onRequestPost(context) {
   const { request, env } = context;
   const corsHeaders = {
@@ -11,6 +10,8 @@ export async function onRequestPost(context) {
   try {
     const { email, sessionId, deviceId, appId, appName, platform } = await request.json();
     
+    console.log('Register request:', { email, sessionId, appId, appName });
+
     // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -28,6 +29,8 @@ export async function onRequestPost(context) {
       'SELECT * FROM testers WHERE email = ?'
     ).bind(email.toLowerCase()).first();
 
+    console.log('Existing tester:', tester);
+
     if (!tester) {
       // Create new tester
       const testerId = crypto.randomUUID();
@@ -44,14 +47,25 @@ export async function onRequestPost(context) {
         device_id: deviceId || null
       };
 
-      // Register for ALL apps
-      const apps = await env.DB.prepare(
+      console.log('Created new tester:', tester);
+
+      // Get all active apps
+      const appsResult = await env.DB.prepare(
         'SELECT * FROM apps WHERE is_active = 1'
       ).all();
 
+      console.log('Apps found:', appsResult.results.length);
+
+      // If no apps in database, use default apps
+      let appsList = appsResult.results;
+      if (appsList.length === 0) {
+        appsList = getDefaultApps();
+      }
+
       const registrations = [];
       
-      for (const app of apps.results) {
+      // Register for ALL apps
+      for (const app of appsList) {
         const registrationId = crypto.randomUUID();
         const regNow = new Date().toISOString();
         
@@ -71,9 +85,11 @@ export async function onRequestPost(context) {
         });
       }
 
+      console.log('Created registrations:', registrations.length);
+
       return new Response(JSON.stringify({
         success: true,
-        message: 'Usajili umefanikiwa kwa programu zote 6',
+        message: 'Usajili umefanikiwa kwa programu zote',
         tester: {
           id: tester.id,
           email: tester.email,
@@ -83,15 +99,19 @@ export async function onRequestPost(context) {
         registrations
       }), { headers: corsHeaders });
     } else {
-      // Update session ID
+      // Update session ID for returning user
       await env.DB.prepare(
         'UPDATE testers SET session_id = ?, updated_at = ? WHERE id = ?'
       ).bind(sessionId, new Date().toISOString(), tester.id).run();
+
+      console.log('Updated session for existing tester');
 
       // Get all existing registrations
       const existingRegs = await env.DB.prepare(
         'SELECT * FROM registrations WHERE tester_id = ? ORDER BY created_at DESC'
       ).bind(tester.id).all();
+
+      console.log('Existing registrations:', existingRegs.results.length);
 
       const registrations = existingRegs.results.map(reg => ({
         id: reg.id,
@@ -117,9 +137,10 @@ export async function onRequestPost(context) {
       }), { headers: corsHeaders });
     }
   } catch (error) {
+    console.error('Registration error:', error);
     return new Response(JSON.stringify({
       success: false,
-      message: error.message
+      message: error.message || 'Internal server error'
     }), { 
       status: 500,
       headers: corsHeaders 
@@ -135,4 +156,15 @@ export async function onRequestOptions() {
       'Access-Control-Allow-Headers': 'Content-Type',
     }
   });
+}
+
+function getDefaultApps() {
+  return [
+    { id: 'pdf-office', name: 'PDF Office' },
+    { id: 'free-screen-recorder', name: 'Free Screen Recorder' },
+    { id: 'jobsreport', name: 'JobsReport' },
+    { id: 'music-play', name: 'Music Play' },
+    { id: 'top-file-manager', name: 'Top File Manager' },
+    { id: 'int-calculator', name: 'Int Calculator' }
+  ];
 }
