@@ -1,4 +1,3 @@
-// functions/api/apps.js
 export async function onRequestGet(context) {
   const { env } = context;
   const corsHeaders = {
@@ -13,17 +12,13 @@ export async function onRequestGet(context) {
       'SELECT * FROM apps WHERE is_active = 1 ORDER BY name'
     ).all();
 
-    // Always return default apps if database is empty
-    const defaultApps = getDefaultApps();
-    
     if (apps.results.length === 0) {
       return new Response(JSON.stringify({
         success: true,
-        apps: defaultApps
+        apps: getDefaultApps()
       }), { headers: corsHeaders });
     }
 
-    // Parse features JSON for each app
     const parsedApps = apps.results.map(app => ({
       id: app.id,
       name: app.name,
@@ -33,7 +28,7 @@ export async function onRequestGet(context) {
       platform: app.platform || 'Android',
       iconName: app.icon_name || 'file-text',
       accentColor: app.accent_color || '#06b6d4',
-      testingUrl: app.testing_url || 'https://play.google.com/apps/testing/',
+      testingUrl: app.testing_url || getDefaultUrl(app.id),
       isActive: app.is_active === 1,
       features: app.features ? JSON.parse(app.features) : ['Feature 1', 'Feature 2', 'Feature 3'],
       dualCameraNote: app.dual_camera_note,
@@ -53,14 +48,16 @@ export async function onRequestGet(context) {
   }
 }
 
-export async function onRequestOptions() {
-  return new Response(null, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    }
-  });
+function getDefaultUrl(appId) {
+  const urls = {
+    'pdf-office': 'https://play.google.com/apps/testing/co.pdfoffice.ap',
+    'free-screen-recorder': 'https://play.google.com/apps/testing/co.freescreenrecorder.ap',
+    'jobsreport': 'https://play.google.com/apps/testing/co.jobsreport.ap',
+    'music-play': 'https://play.google.com/apps/testing/co.musicplay.ap',
+    'top-file-manager': 'https://play.google.com/apps/testing/co.topfilemanager.ap',
+    'int-calculator': 'https://play.google.com/apps/testing/co.intcalculator.ap'
+  };
+  return urls[appId] || '';
 }
 
 function getDefaultApps() {
@@ -74,7 +71,7 @@ function getDefaultApps() {
       platform: 'Android',
       iconName: 'file-text',
       accentColor: '#ef4444',
-      testingUrl: 'https://play.google.com/apps/testing/com.pdf.office',
+      testingUrl: 'https://play.google.com/apps/testing/co.pdfoffice.ap',
       isActive: true,
       features: ['PDF Reader', 'PDF Editor', 'PDF Converter']
     },
@@ -87,7 +84,7 @@ function getDefaultApps() {
       platform: 'Android',
       iconName: 'video',
       accentColor: '#8b5cf6',
-      testingUrl: 'https://play.google.com/apps/testing/com.screen.recorder',
+      testingUrl: 'https://play.google.com/apps/testing/co.freescreenrecorder.ap',
       isActive: true,
       features: ['HD Recording', 'Dual Camera', 'No Watermark'],
       dualCameraNote: 'Record with front and back camera simultaneously'
@@ -101,7 +98,7 @@ function getDefaultApps() {
       platform: 'Android',
       iconName: 'briefcase',
       accentColor: '#06b6d4',
-      testingUrl: 'https://play.google.com/apps/testing/com.jobsreport',
+      testingUrl: 'https://play.google.com/apps/testing/co.jobsreport.ap',
       isActive: true,
       features: ['Job Search', 'CV Builder', 'Job Alerts']
     },
@@ -114,7 +111,7 @@ function getDefaultApps() {
       platform: 'Android',
       iconName: 'music',
       accentColor: '#f59e0b',
-      testingUrl: 'https://play.google.com/apps/testing/com.music.play',
+      testingUrl: 'https://play.google.com/apps/testing/co.musicplay.ap',
       isActive: true,
       features: ['MP3 Player', 'Equalizer', 'Playlists']
     },
@@ -127,7 +124,7 @@ function getDefaultApps() {
       platform: 'Android',
       iconName: 'folder',
       accentColor: '#10b981',
-      testingUrl: 'https://play.google.com/apps/testing/com.file.manager',
+      testingUrl: 'https://play.google.com/apps/testing/co.topfilemanager.ap',
       isActive: true,
       features: ['File Browser', 'Private Vault', 'Cloud Storage'],
       privateAreaNote: 'Secure your private files with password protection'
@@ -141,7 +138,7 @@ function getDefaultApps() {
       platform: 'Android',
       iconName: 'calculator',
       accentColor: '#3b82f6',
-      testingUrl: 'https://play.google.com/apps/testing/com.int.calculator',
+      testingUrl: 'https://play.google.com/apps/testing/co.intcalculator.ap',
       isActive: true,
       features: ['Scientific Mode', 'History', 'Themes'],
       privateAreaNote: 'Hide your calculation history with password'
