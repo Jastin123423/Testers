@@ -281,7 +281,7 @@ export async function apiAdminOverview(token: string) {
   }
 }
 
-// Get all testers (admin)
+// Get all testers grouped by email (admin)
 export async function apiAdminTesters(token: string) {
   try {
     const res = await fetch('/api/admin/testers', {
@@ -296,7 +296,27 @@ export async function apiAdminTesters(token: string) {
   }
 }
 
-// Update tester status (admin)
+// Approve/Reject ALL apps for a tester by email (admin)
+export async function apiApproveAllTesterApps(token: string, email: string, status: string) {
+  try {
+    const res = await fetch('/api/admin/testers/approve-all', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ email, status }),
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    return data;
+  } catch (error) {
+    console.error('Error approving all apps:', error);
+    throw error;
+  }
+}
+
+// Update tester status (admin) - for single app
 export async function apiUpdateTesterStatus(token: string, testerId: string, status: string) {
   try {
     const res = await fetch(`/api/admin/testers/${testerId}/status`, {
