@@ -28,7 +28,11 @@ import {
   setRegistrationTimerForAll,
   getSavedEmail,
   setSavedEmail,
-  setSavedDevice
+  setSavedDevice,
+  apiFetchApps,
+  apiCheckEmail,
+  apiRegisterTester,
+  apiChangeEmail
 } from './lib/storage';
 import { Lock, Mail, Sparkles } from 'lucide-react';
 
@@ -36,6 +40,7 @@ export default function App() {
   const [apps, setApps] = useState<AppInfo[]>(INITIAL_APPS);
   const [userRegistrations, setUserRegistrations] = useState<TesterRegistration[]>(getCachedRegistrations());
   const [savedEmail, setLocalSavedEmail] = useState<string | null>(getSavedEmail());
+  const [isLoading, setIsLoading] = useState(true);
 
   // Modals state
   const [selectedAppForRegister, setSelectedAppForRegister] = useState<AppInfo | null>(null);
@@ -48,13 +53,9 @@ export default function App() {
   // Fetch apps from backend or fallback to initial
   const loadApps = async () => {
     try {
-      const res = await fetch('/api/apps');
-      if (res.ok) {
-        const text = await res.text();
-        const data = text ? JSON.parse(text) : {};
-        if (data.success && Array.isArray(data.apps) && data.apps.length > 0) {
-          setApps(data.apps);
-        }
+      const data = await apiFetchApps();
+      if (data.success && Array.isArray(data.apps) && data.apps.length > 0) {
+        setApps(data.apps);
       }
     } catch (err) {
       console.warn('Could not fetch apps from API, using default list:', err);
@@ -63,83 +64,115 @@ export default function App() {
 
   // Sync user status from backend
   const refreshUserStatus = async () => {
-    const freshRegs = await fetchLiveTesterStatus();
-    setUserRegistrations(freshRegs);
+    try {
+      const freshRegs = await fetchLiveTesterStatus();
+      setUserRegistrations(freshRegs);
+      const email = getSavedEmail();
+      if (email) setLocalSavedEmail(email);
+    } catch (error) {
+      console.error('Error refreshing user status:', error);
+    }
+  };
+
+  // Check for returning user
+  const checkReturningUser = async () => {
+    const sessionId = getOrCreateSessionId();
     const email = getSavedEmail();
-    if (email) setLocalSavedEmail(email);
+    
+    try {
+      const result = await apiCheckEmail(email || '', sessionId);
+      
+      if (result.success && result.isReturning) {
+        if (result.registrations && result.registrations.length > 0) {
+          setUserRegistrations(result.registrations);
+          cacheRegistrations(result.registrations);
+        }
+        
+        if (result.tester?.email && !email) {
+          setSavedEmail(result.tester.email);
+          setLocalSavedEmail(result.tester.email);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking returning user:', error);
+    }
   };
 
   useEffect(() => {
-    // 1. Initialize browser session identifier
-    getOrCreateSessionId();
+    const initialize = async () => {
+      setIsLoading(true);
+      
+      // 1. Initialize browser session identifier
+      getOrCreateSessionId();
 
-    // 2. Load apps list
-    loadApps();
+      // 2. Load apps list
+      await loadApps();
 
-    // 3. Load user registrations for this browser
-    refreshUserStatus();
+      // 3. Check for returning user
+      await checkReturningUser();
 
-    // Check query params if #admin is in hash
-    if (window.location.hash === '#admin') {
-      setIsAdminOpen(true);
-    }
+      // Check query params if #admin is in hash
+      if (window.location.hash === '#admin') {
+        setIsAdminOpen(true);
+      }
+      
+      setIsLoading(false);
+    };
+
+    initialize();
   }, []);
 
   // Global registration: submitting email registers for all 6 apps (Android users only)
   const handleGlobalEmailSubmit = async (email: string): Promise<boolean> => {
     const sessionId = getOrCreateSessionId();
+    const deviceId = localStorage.getItem('beta_tester_device_model') || undefined;
     
-    let response: Response;
     try {
-      response = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          sessionId,
-        }),
+      // Register for first app (this will create the tester)
+      // We'll use the first app as primary registration
+      const firstApp = apps[0];
+      
+      const result = await apiRegisterTester({
+        email,
+        sessionId,
+        deviceId,
+        appId: firstApp.id,
+        appName: firstApp.name,
+        platform: firstApp.platform || 'Android',
       });
-    } catch (networkErr: any) {
-      throw new Error('Hitilafu ya muunganisho wa mtandao. Tafadhali angalia intaneti yako na ujaribu tena.');
+
+      if (!result.success) {
+        throw new Error(result.message || 'Hitilafu ya kusajili. Tafadhali jaribu tena.');
+      }
+
+      // Save email
+      setSavedEmail(email);
+      setLocalSavedEmail(email);
+
+      // Get all registrations for this user
+      const checkResult = await apiCheckEmail(email, sessionId);
+      
+      const regList: TesterRegistration[] = checkResult.success && Array.isArray(checkResult.registrations) 
+        ? checkResult.registrations 
+        : [result.registration];
+
+      setUserRegistrations(regList);
+      cacheRegistrations(regList);
+
+      // Set 10-minute countdown for all apps
+      const allAppIds = apps.map(a => a.id);
+      setRegistrationTimerForAll(allAppIds, 10);
+
+      // Show success modal
+      const summaryReg = regList[0] || result.registration;
+      setLastSubmittedReg(summaryReg);
+      setIsSuccessModalOpen(true);
+
+      return true;
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      throw new Error(error.message || 'Hitilafu ya kusajili. Tafadhali jaribu tena.');
     }
-
-    const text = await response.text();
-    let data: any = {};
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      throw new Error('Huduma haikutoa majibu sahihi kwa sasa. Tafadhali jaribu tena baada ya muda mfupi.');
-    }
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.message || 'Hitilafu ya kusajili. Tafadhali jaribu tena.');
-    }
-
-    const regList: TesterRegistration[] = Array.isArray(data.registrations) ? data.registrations : [];
-    setUserRegistrations(regList);
-    cacheRegistrations(regList);
-    setSavedEmail(email);
-    setLocalSavedEmail(email);
-
-    // Set 10-minute countdown for all apps
-    const allAppIds = apps.map(a => a.id);
-    setRegistrationTimerForAll(allAppIds, 10);
-
-    // Show success modal
-    const summaryReg = regList[0] || {
-      id: 'all',
-      email,
-      appName: 'All Apps',
-      appId: 'all',
-      sessionId,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setLastSubmittedReg(summaryReg);
-    setIsSuccessModalOpen(true);
-
-    return true;
   };
 
   // Single app modal submission (if ever opened)
