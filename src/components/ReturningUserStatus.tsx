@@ -3,7 +3,6 @@ import {
   CheckCircle2, 
   Clock, 
   XCircle, 
-  ExternalLink, 
   RefreshCw, 
   Info, 
   Smartphone,
@@ -151,7 +150,7 @@ export const ReturningUserStatus: React.FC<ReturningUserStatusProps> = ({
               <span>Tarehe: {new Date(activeReg.createdAt).toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
             </div>
 
-            {/* STATUS 1: APPROVED */}
+            {/* STATUS 1: APPROVED - No download button, just notification */}
             {activeReg.status === 'approved' && (
               <div className="mt-6 p-6 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-100">
                 <div className="flex items-center gap-3">
@@ -172,36 +171,16 @@ export const ReturningUserStatus: React.FC<ReturningUserStatusProps> = ({
                   Msimamizi amekuruhusu rasmi kwenye mfumo wa majaribio wa Google Play. Sasa unaweza kujiunga na Closed Test na kupakua app kwenye simu yako.
                 </p>
 
-                {/* Important Google Play Guidance Mandate */}
+                {/* Guidance to scroll down to apps */}
                 <div className="mt-4 p-3.5 rounded-xl bg-slate-900/80 border border-emerald-500/20 text-xs text-slate-300 flex items-start gap-2.5">
                   <Info className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong>Maelekezo Muhimu ya Google Play:</strong>
+                    <strong>Pakua App Hapa Chini:</strong>
                     <p className="mt-0.5 text-slate-300">
-                      Baada ya kubofya kitufe cha kujiunga, utaelekezwa Google Play. Hakikisha umeingia kwenye Google Play kwa kutumia Gmail ile ile uliyowasilisha wakati wa usajili (<span className="text-emerald-300 font-mono">{activeReg.email}</span>).
+                      Tembelea chini kwenye orodha ya apps na ubofye kitufe cha <strong>"JIUNGE NA TEST & PAKUA APP"</strong> kwenye app uliyoidhinishwa.
                     </p>
                   </div>
                 </div>
-
-                {/* Call To Action Button */}
-                {activeReg.testingUrl ? (
-                  <div className="mt-6">
-                    <a
-                      id={`btn-join-test-${activeReg.appId}`}
-                      href={activeReg.testingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl text-base font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all font-['Outfit']"
-                    >
-                      <ExternalLink className="w-5 h-5" />
-                      <span>JIUNGE NA TEST & PAKUA APP</span>
-                    </a>
-                  </div>
-                ) : (
-                  <div className="mt-4 text-xs text-amber-300">
-                    Kiungo cha Google Play kinaandaliwa na msimamizi. Tafadhali subiri kwa muda mfupi.
-                  </div>
-                )}
               </div>
             )}
 
@@ -222,7 +201,6 @@ export const ReturningUserStatus: React.FC<ReturningUserStatusProps> = ({
                   </div>
                 </div>
 
-                {/* Countdown display if active */}
                 {remainingTime > 0 ? (
                   <div className="mt-4 p-3 rounded-xl bg-slate-900/70 border border-amber-500/20 flex items-center justify-between">
                     <span className="text-xs text-slate-300">
