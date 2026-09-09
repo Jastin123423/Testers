@@ -6,7 +6,8 @@ import {
   getSavedEmail, 
   setSavedEmail, 
   cacheRegistrations,
-  setRegistrationTimerForAll
+  setRegistrationTimerForAll,
+  apiChangeEmail
 } from '../lib/storage';
 
 interface ChangeEmailModalProps {
@@ -48,38 +49,22 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
 
     try {
       const sessionId = getOrCreateSessionId();
-      const res = await fetch('/api/change-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          oldEmail: existingEmail,
-          newEmail: cleanEmail,
-          sessionId,
-        }),
-      });
+      const result = await apiChangeEmail(existingEmail, cleanEmail, sessionId);
 
-      const text = await res.text();
-      let data: any = {};
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        throw new Error('Hitilafu ya mtandao au seva. Tafadhali jaribu tena.');
-      }
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Hitilafu imetokea wakati wa kusasisha barua pepe.');
+      if (!result.success) {
+        throw new Error(result.message || 'Hitilafu imetokea wakati wa kusasisha barua pepe.');
       }
 
       setSavedEmail(cleanEmail);
-      if (Array.isArray(data.registrations) && data.registrations.length > 0) {
-        cacheRegistrations(data.registrations);
+      if (Array.isArray(result.registrations) && result.registrations.length > 0) {
+        cacheRegistrations(result.registrations);
         setRegistrationTimerForAll(allAppIds, 10);
       }
 
-      setSuccessMsg(data.message || 'Barua pepe imesasishwa kikamilifu! Apps zote zimefunguliwa.');
+      setSuccessMsg(result.message || 'Barua pepe imesasishwa kikamilifu! Apps zote zimefunguliwa.');
       
       setTimeout(() => {
-        onSuccess(data.registrations || [], cleanEmail);
+        onSuccess(result.registrations || [], cleanEmail);
         onClose();
       }, 1200);
     } catch (err: any) {
