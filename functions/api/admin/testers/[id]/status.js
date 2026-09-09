@@ -15,8 +15,6 @@ export async function onRequestPost(context) {
     const authHeader = request.headers.get('Authorization') || '';
     const token = authHeader.replace('Bearer ', '');
     
-    console.log('Token:', token);
-    
     if (!token || !(await validateAdminToken(token, env))) {
       return new Response(JSON.stringify({ 
         success: false, 
@@ -48,8 +46,6 @@ export async function onRequestPost(context) {
       'SELECT * FROM registrations WHERE id = ?'
     ).bind(testerId).first();
 
-    console.log('Registration found:', reg);
-
     if (!reg) {
       return new Response(JSON.stringify({
         success: false,
@@ -63,7 +59,7 @@ export async function onRequestPost(context) {
     // Get testing URL if approving
     let testingUrl = null;
     if (status === 'approved') {
-      // Check if app exists in database
+      // First try to get from apps table
       const app = await env.DB.prepare(
         'SELECT testing_url FROM apps WHERE id = ?'
       ).bind(reg.app_id).first();
@@ -71,28 +67,24 @@ export async function onRequestPost(context) {
       if (app && app.testing_url) {
         testingUrl = app.testing_url;
       } else {
-        // Use default URLs
+        // Use correct default URLs
         const defaultUrls = {
-          'pdf-office': 'https://play.google.com/apps/testing/com.pdf.office',
-          'free-screen-recorder': 'https://play.google.com/apps/testing/com.screen.recorder',
-          'jobsreport': 'https://play.google.com/apps/testing/com.jobsreport',
-          'music-play': 'https://play.google.com/apps/testing/com.music.play',
-          'top-file-manager': 'https://play.google.com/apps/testing/com.file.manager',
-          'int-calculator': 'https://play.google.com/apps/testing/com.int.calculator'
+          'pdf-office': 'https://play.google.com/apps/testing/co.pdfoffice.ap',
+          'free-screen-recorder': 'https://play.google.com/apps/testing/co.freescreenrecorder.ap',
+          'jobsreport': 'https://play.google.com/apps/testing/co.jobsreport.ap',
+          'music-play': 'https://play.google.com/apps/testing/co.musicplay.ap',
+          'top-file-manager': 'https://play.google.com/apps/testing/co.topfilemanager.ap',
+          'int-calculator': 'https://play.google.com/apps/testing/co.intcalculator.ap'
         };
         testingUrl = defaultUrls[reg.app_id] || null;
       }
     }
 
-    console.log('Testing URL:', testingUrl);
-
     // Update status
     const now = new Date().toISOString();
-    const updateResult = await env.DB.prepare(
+    await env.DB.prepare(
       'UPDATE registrations SET status = ?, testing_url = ?, updated_at = ? WHERE id = ?'
     ).bind(status, testingUrl, now, testerId).run();
-
-    console.log('Update result:', updateResult);
 
     // Get updated registration
     const updatedReg = await env.DB.prepare(`
@@ -101,8 +93,6 @@ export async function onRequestPost(context) {
       JOIN testers t ON r.tester_id = t.id
       WHERE r.id = ?
     `).bind(testerId).first();
-
-    console.log('Updated registration:', updatedReg);
 
     return new Response(JSON.stringify({
       success: true,
