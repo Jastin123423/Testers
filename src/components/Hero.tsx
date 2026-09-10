@@ -70,7 +70,7 @@ export const Hero: React.FC<HeroProps> = ({
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white font-['Outfit'] leading-[1.15]">
             Jiunge na Majaribio ya <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-              Android Apps Zetu 6
+             App Ya JobsReport na Apps Nyingine 5
             </span>
           </h1>
 
