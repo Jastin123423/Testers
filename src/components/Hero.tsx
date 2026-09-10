@@ -182,7 +182,7 @@ export const Hero: React.FC<HeroProps> = ({
                   onClick={onExploreApps}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-bold text-slate-950 bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-400 hover:from-cyan-300 hover:to-blue-300 shadow-xl shadow-cyan-500/25 active:scale-95 transition-all cursor-pointer group"
                 >
-                  <span>Tazama Programu Zote 6 Chini</span>
+                  <span>Tazama Apps Zote 6 ikiwemo JobsReport Chini</span>
                   <ArrowDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
                 </button>
 
