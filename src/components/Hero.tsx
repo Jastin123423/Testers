@@ -205,7 +205,7 @@ export const Hero: React.FC<HeroProps> = ({
               </div>
               <div>
                 <div className="font-bold text-sm text-white">Android Pekee</div>
-                <div className="text-xs text-slate-400">Apps 6 Mpya</div>
+                <div className="text-xs text-slate-400">Apps 6 Mpya ikiwemo JobsReport</div>
               </div>
             </div>
 
